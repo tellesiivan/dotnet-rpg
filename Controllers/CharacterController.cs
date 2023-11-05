@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using dotnet_rpg.DTOs;
 using dotnet_rpg.Models;
+using dotnet_rpg.Services.CharacterService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace dotnet_rpg.Controllers
@@ -12,29 +14,49 @@ namespace dotnet_rpg.Controllers
     [Route("[controller]")]
     public class CharacterController : ControllerBase
     {
-        public static readonly List<Character> characters =
-            new()
-            {
-                new Character(),
-                new Character() { Name = "Wayne", Class = RpgClass.Mage }
-            };
+        private readonly ICharacterService _characterService;
 
-        [HttpGet("all")]
-        public ActionResult<List<Character>> GetCharcters()
+        public CharacterController(ICharacterService characterService)
         {
-            return Ok(characters);
+            _characterService = characterService;
         }
 
-        [HttpGet("single/{rpgClass}")]
-        public ActionResult<Character> GetCharcterDetails(RpgClass rpgClass)
+        [HttpGet("all")]
+        public async Task<ActionResult<ServiceResponse<List<Character>>>> GetCharcters()
         {
-            Character? character = characters.FirstOrDefault((a) => a.Class == rpgClass);
+            return Ok(await _characterService.GetCharacters());
+        }
 
-            if (character is null)
+        [HttpGet("details/{id}")]
+        public async Task<ActionResult<ServiceResponse<GetCharacterDto>>> GetCharcterDetails(int id)
+        {
+            Task<ServiceResponse<GetCharacterDto>> response = _characterService.GetCharacterById(
+                id
+            );
+            return Ok(await response);
+        }
+
+        [HttpPost("Add")]
+        public async Task<ActionResult<ServiceResponse<List<GetCharacterDto>>>> AddCharacter(
+            AddCharacterDto character
+        )
+        {
+            return Ok(await _characterService.AddCharacter(character));
+        }
+
+        [HttpPut("Update")]
+        public async Task<ActionResult<ServiceResponse<GetCharacterDto>>> UpdateCharcter(
+            UpdateCharterDto updateCharacter
+        )
+        {
+            var UpdatedCharacterRes = await _characterService.UpdataChacter(updateCharacter);
+
+            if (UpdatedCharacterRes.Data is null)
             {
-                return NotFound();
+                return NotFound(UpdatedCharacterRes);
             }
-            return Ok(character);
+
+            return Ok(UpdatedCharacterRes);
         }
     }
 }
