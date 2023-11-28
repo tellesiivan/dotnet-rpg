@@ -1,10 +1,16 @@
 // --> make it global so we only have to reference it once if we are using it in multiple placess of the app
 global using AutoMapper;
+global using Microsoft.EntityFrameworkCore;
+using dotnet_rpg.Data;
 using dotnet_rpg.Services.CharacterService;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddDbContext<DataContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 builder.Services.AddControllers();
 

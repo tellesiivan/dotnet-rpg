@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using dotnet_rpg.DTOs;
 using dotnet_rpg.Models;
 using dotnet_rpg.Services.CharacterService;
@@ -36,6 +32,13 @@ namespace dotnet_rpg.Controllers
             return Ok(await response);
         }
 
+        [HttpDelete("delete/{id}")]
+        public async Task<ActionResult<BaseResponse>> DeleteCharacterById(int id)
+        {
+            BaseResponse baseResponse = await _characterService.DeleteCharacterById(id);
+            return baseResponse.IsSuccess ? Ok(baseResponse) : NotFound(baseResponse);
+        }
+
         [HttpPost("Add")]
         public async Task<ActionResult<ServiceResponse<List<GetCharacterDto>>>> AddCharacter(
             AddCharacterDto character
@@ -49,7 +52,7 @@ namespace dotnet_rpg.Controllers
             UpdateCharterDto updateCharacter
         )
         {
-            var UpdatedCharacterRes = await _characterService.UpdataChacter(updateCharacter);
+            var UpdatedCharacterRes = await _characterService.UpdateCharacter(updateCharacter);
 
             if (UpdatedCharacterRes.Data is null)
             {

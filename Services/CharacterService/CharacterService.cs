@@ -1,46 +1,34 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using dotnet_rpg.Data;
 using dotnet_rpg.DTOs;
 using dotnet_rpg.Models;
+using Microsoft.IdentityModel.Tokens;
 
 namespace dotnet_rpg.Services.CharacterService
 {
     public class CharacterService : ICharacterService
     {
-        public static readonly List<Character> characters =
-            new()
-            {
-                new Character(),
-                new Character()
-                {
-                    Name = "Wayne",
-                    Class = RpgClass.Mage,
-                    Id = 5
-                }
-            };
-
         private readonly IMapper _mapper;
+        private readonly DataContext _dataContext;
 
-        public CharacterService(IMapper mapper)
+        public CharacterService(IMapper mapper, DataContext dataContext)
         {
             _mapper = mapper;
+            _dataContext = dataContext;
         }
 
         public async Task<ServiceResponse<List<GetCharacterDto>>> GetCharacters()
         {
-            List<GetCharacterDto> mappedData = MapUserData();
 
             ServiceResponse<List<GetCharacterDto>> serviceResponse =
-                new() { Data = mappedData, IsSuccess = true, };
+                new() { Data = await GetMappedCharactersList(), IsSuccess = true, };
 
             return serviceResponse;
         }
 
         public async Task<ServiceResponse<GetCharacterDto>> GetCharacterById(int id)
         {
-            Character? character = characters.FirstOrDefault((a) => a.Id == id);
+            Character? character =
+                await _dataContext.Characters.FirstOrDefaultAsync((character => character.Id == id));
 
             ServiceResponse<GetCharacterDto> serviceResponse =
                 new()
@@ -52,44 +40,63 @@ namespace dotnet_rpg.Services.CharacterService
             return serviceResponse;
         }
 
+        public async Task<BaseResponse> DeleteCharacterById(int id)
+        {
+            BaseResponse response = new();
+            Character? matchedCharacter = _dataContext.Characters.FirstOrDefault(
+                character => character.Id == id
+            );
+
+            try
+            {
+                if (matchedCharacter is null)
+                {
+                    throw new Exception($"The id:{id} does not match any character id");
+                }
+                _dataContext.Characters.Remove(matchedCharacter);
+                await _dataContext.SaveChangesAsync();
+                response.IsSuccess = true;
+                response.Message =
+                    $"Character with the following id was successfully deleted: {id}";
+            }
+            catch (Exception exception)
+            {
+                response.IsSuccess = false;
+            }
+
+            return response;
+        }
+
         public async Task<ServiceResponse<List<GetCharacterDto>>> AddCharacter(
             AddCharacterDto newCharacter
         )
         {
-            // map our new character to the corrrect model
+            // map our new character to the correct model
             Character characterToAdd = _mapper.Map<Character>(newCharacter);
-            // find the max id value
-            int currentIdValue = characters.Max((character) => character.Id);
-            // set the new character id value to the max id value + 1
-            characterToAdd.Id = currentIdValue + 1;
-            // add it into the characters list
-            characters.Add(characterToAdd);
-
-            List<GetCharacterDto> mappedData = MapUserData();
-
+            _dataContext.Characters.Add(characterToAdd);
+            await _dataContext.SaveChangesAsync();
+            
             ServiceResponse<List<GetCharacterDto>> serviceResponse =
-                new() { Data = mappedData, IsSuccess = true, };
+                new() { Data = await GetMappedCharactersList(), IsSuccess = true, };
 
             return serviceResponse;
         }
 
-        public async Task<ServiceResponse<GetCharacterDto>> UpdataChacter(
+        public async Task<ServiceResponse<GetCharacterDto>> UpdateCharacter(
             UpdateCharterDto updateCharacter
         )
         {
             ServiceResponse<GetCharacterDto> serviceResponse = new();
-            var matchedCharacter = characters.FirstOrDefault(
+            var matchedCharacter = _dataContext.Characters.FirstOrDefault(
                 character => character.Id == updateCharacter.Id
             );
 
-            // we can also wrap this into a trycatch block and set the data, message and isSuccess = false
+            // we can also wrap this into a try-catch block and set the data, message and isSuccess = false
             if (matchedCharacter is not null)
             {
-                matchedCharacter.Name = updateCharacter.Name;
-                matchedCharacter.Strength = updateCharacter.Strength;
-                matchedCharacter.Defense = updateCharacter.Defense;
-                matchedCharacter.Class = updateCharacter.Class;
-                matchedCharacter.Intellegence = updateCharacter.Intellegence;
+                // we are mapping the values from the new updated character to the matched character
+                _mapper.Map(updateCharacter, matchedCharacter);
+                await _dataContext.SaveChangesAsync();
 
                 serviceResponse.Data = _mapper.Map<GetCharacterDto>(matchedCharacter);
             }
@@ -103,11 +110,12 @@ namespace dotnet_rpg.Services.CharacterService
 
             return serviceResponse;
         }
-
-        private List<GetCharacterDto> MapUserData()
+        
+        private async Task<List<GetCharacterDto>> GetMappedCharactersList()
         {
-            // return it back into a list in order to satisfy our response type
-            return characters.Select(character => _mapper.Map<GetCharacterDto>(character)).ToList();
+            var charactersAsyncList = await _dataContext.Characters.ToListAsync();
+            var mappedCharacterList = charactersAsyncList.Select(character => _mapper.Map<GetCharacterDto>(character)).ToList();
+            return mappedCharacterList;
         }
     }
 }
