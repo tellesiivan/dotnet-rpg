@@ -2,6 +2,7 @@
 global using AutoMapper;
 global using Microsoft.EntityFrameworkCore;
 using dotnet_rpg.Data;
+using dotnet_rpg.Services.Auth;
 using dotnet_rpg.Services.CharacterService;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +24,7 @@ builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
 // Adds a scoped service of the type specified in ICharacterService with an implementation type specified in CharacterService to the specified IServiceCollection.<Interface, Service>
 builder.Services.AddScoped<ICharacterService, CharacterService>();
+builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 
 var app = builder.Build();
 

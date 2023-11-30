@@ -1,4 +1,5 @@
 using dotnet_rpg.DTOs;
+using dotnet_rpg.DTOs.Character;
 using dotnet_rpg.Models;
 
 namespace dotnet_rpg

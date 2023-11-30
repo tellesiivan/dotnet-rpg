@@ -1,7 +1,7 @@
 using dotnet_rpg.Data;
 using dotnet_rpg.DTOs;
+using dotnet_rpg.DTOs.Character;
 using dotnet_rpg.Models;
-using Microsoft.IdentityModel.Tokens;
 
 namespace dotnet_rpg.Services.CharacterService
 {
