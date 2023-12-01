@@ -16,11 +16,11 @@ namespace dotnet_rpg.Services.CharacterService
             _dataContext = dataContext;
         }
 
-        public async Task<ServiceResponse<List<GetCharacterDto>>> GetCharacters()
+        public async Task<ServiceResponse<List<GetCharacterDto>>> GetCharacters(int userId)
         {
 
             ServiceResponse<List<GetCharacterDto>> serviceResponse =
-                new() { Data = await GetMappedCharactersList(), IsSuccess = true, };
+                new() { Data = await GetMappedCharactersList(userId), IsSuccess = true, };
 
             return serviceResponse;
         }
@@ -68,7 +68,7 @@ namespace dotnet_rpg.Services.CharacterService
         }
 
         public async Task<ServiceResponse<List<GetCharacterDto>>> AddCharacter(
-            AddCharacterDto newCharacter
+            AddCharacterDto newCharacter, int userId
         )
         {
             // map our new character to the correct model
@@ -77,7 +77,7 @@ namespace dotnet_rpg.Services.CharacterService
             await _dataContext.SaveChangesAsync();
             
             ServiceResponse<List<GetCharacterDto>> serviceResponse =
-                new() { Data = await GetMappedCharactersList(), IsSuccess = true, };
+                new() { Data = await GetMappedCharactersList(userId), IsSuccess = true, };
 
             return serviceResponse;
         }
@@ -111,9 +111,9 @@ namespace dotnet_rpg.Services.CharacterService
             return serviceResponse;
         }
         
-        private async Task<List<GetCharacterDto>> GetMappedCharactersList()
+        private async Task<List<GetCharacterDto>> GetMappedCharactersList(int userId)
         {
-            var charactersAsyncList = await _dataContext.Characters.ToListAsync();
+            var charactersAsyncList = await _dataContext.Characters.Where(c => c.User!.Id == userId).ToListAsync();
             var mappedCharacterList = charactersAsyncList.Select(character => _mapper.Map<GetCharacterDto>(character)).ToList();
             return mappedCharacterList;
         }

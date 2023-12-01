@@ -29,4 +29,14 @@ public class AuthController: ControllerBase
         return response.IsSuccess ? Ok(response) : BadRequest(response);
     }
     
+    
+    [Route("Login")]
+    [HttpPost]
+    public async Task<ActionResult<ServiceResponse<int>>> Login([FromBody]UserLoginDto user)
+    {
+        var response = await _authService.Login(user.Username, user.Password);
+
+        return response.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+    
 }

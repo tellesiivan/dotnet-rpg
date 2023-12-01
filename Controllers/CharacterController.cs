@@ -1,13 +1,15 @@
+using System.Security.Claims;
 using dotnet_rpg.DTOs;
 using dotnet_rpg.DTOs.Character;
 using dotnet_rpg.Models;
 using dotnet_rpg.Services.CharacterService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace dotnet_rpg.Controllers
 {
+    [Authorize]
     [ApiController]
-    // [Route("api/[controller]")]
     [Route("[controller]")]
     public class CharacterController : ControllerBase
     {
@@ -21,11 +23,12 @@ namespace dotnet_rpg.Controllers
         [HttpGet("all")]
         public async Task<ActionResult<ServiceResponse<List<Character>>>> GetCharcters()
         {
-            return Ok(await _characterService.GetCharacters());
+            int userId = int.Parse(User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)!.Value);
+            return Ok(await _characterService.GetCharacters(userId));
         }
 
         [HttpGet("details/{id}")]
-        public async Task<ActionResult<ServiceResponse<GetCharacterDto>>> GetCharcterDetails(int id)
+        public async Task<ActionResult<ServiceResponse<GetCharacterDto>>> GetCharacterDetails(int id)
         {
             Task<ServiceResponse<GetCharacterDto>> response = _characterService.GetCharacterById(
                 id
@@ -45,7 +48,9 @@ namespace dotnet_rpg.Controllers
             AddCharacterDto character
         )
         {
-            return Ok(await _characterService.AddCharacter(character));
+            var userId = int.Parse(User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)!.Value);
+
+            return Ok(await _characterService.AddCharacter(character, userId));
         }
 
         [HttpPut("Update")]
