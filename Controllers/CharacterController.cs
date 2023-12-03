@@ -24,7 +24,7 @@ namespace dotnet_rpg.Controllers
         public async Task<ActionResult<ServiceResponse<List<Character>>>> GetCharcters()
         {
             int userId = int.Parse(User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)!.Value);
-            return Ok(await _characterService.GetCharacters(userId));
+            return Ok(await _characterService.GetCharacters());
         }
 
         [HttpGet("details/{id}")]
@@ -50,7 +50,7 @@ namespace dotnet_rpg.Controllers
         {
             var userId = int.Parse(User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)!.Value);
 
-            return Ok(await _characterService.AddCharacter(character, userId));
+            return Ok(await _characterService.AddCharacter(character));
         }
 
         [HttpPut("Update")]
@@ -58,14 +58,14 @@ namespace dotnet_rpg.Controllers
             UpdateCharterDto updateCharacter
         )
         {
-            var UpdatedCharacterRes = await _characterService.UpdateCharacter(updateCharacter);
+            var updatedCharacterRes = await _characterService.UpdateCharacter(updateCharacter);
 
-            if (UpdatedCharacterRes.Data is null)
+            if (updatedCharacterRes.Data is null)
             {
-                return NotFound(UpdatedCharacterRes);
+                return NotFound(updatedCharacterRes);
             }
 
-            return Ok(UpdatedCharacterRes);
+            return Ok(updatedCharacterRes);
         }
     }
 }

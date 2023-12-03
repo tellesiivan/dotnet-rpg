@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using dotnet_rpg.Data;
 using dotnet_rpg.DTOs;
 using dotnet_rpg.DTOs.Character;
@@ -9,26 +10,29 @@ namespace dotnet_rpg.Services.CharacterService
     {
         private readonly IMapper _mapper;
         private readonly DataContext _dataContext;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public CharacterService(IMapper mapper, DataContext dataContext)
+        public CharacterService(IMapper mapper, DataContext dataContext, IHttpContextAccessor httpContextAccessor)
         {
             _mapper = mapper;
             _dataContext = dataContext;
+            _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<ServiceResponse<List<GetCharacterDto>>> GetCharacters(int userId)
+        public async Task<ServiceResponse<List<GetCharacterDto>>> GetCharacters()
         {
 
             ServiceResponse<List<GetCharacterDto>> serviceResponse =
-                new() { Data = await GetMappedCharactersList(userId), IsSuccess = true, };
+                new() { Data = await GetMappedCharactersList(), IsSuccess = true, };
 
             return serviceResponse;
         }
 
         public async Task<ServiceResponse<GetCharacterDto>> GetCharacterById(int id)
         {
-            Character? character =
-                await _dataContext.Characters.FirstOrDefaultAsync((character => character.Id == id));
+            var character =
+                await _dataContext.Characters.FirstOrDefaultAsync((character => character.Id == id && 
+                    character.User!.Id == GetAuthUserId()));
 
             ServiceResponse<GetCharacterDto> serviceResponse =
                 new()
@@ -44,7 +48,8 @@ namespace dotnet_rpg.Services.CharacterService
         {
             BaseResponse response = new();
             Character? matchedCharacter = _dataContext.Characters.FirstOrDefault(
-                character => character.Id == id
+                character => character.Id == id  && 
+                             character.User!.Id == GetAuthUserId()
             );
 
             try
@@ -55,12 +60,15 @@ namespace dotnet_rpg.Services.CharacterService
                 }
                 _dataContext.Characters.Remove(matchedCharacter);
                 await _dataContext.SaveChangesAsync();
+                
+                
                 response.IsSuccess = true;
                 response.Message =
                     $"Character with the following id was successfully deleted: {id}";
             }
             catch (Exception exception)
             {
+                
                 response.IsSuccess = false;
             }
 
@@ -68,16 +76,19 @@ namespace dotnet_rpg.Services.CharacterService
         }
 
         public async Task<ServiceResponse<List<GetCharacterDto>>> AddCharacter(
-            AddCharacterDto newCharacter, int userId
+            AddCharacterDto newCharacter
         )
         {
             // map our new character to the correct model
             Character characterToAdd = _mapper.Map<Character>(newCharacter);
+            // add auth user to the character 
+            characterToAdd.User = await GetDbUser();
+            
             _dataContext.Characters.Add(characterToAdd);
             await _dataContext.SaveChangesAsync();
             
             ServiceResponse<List<GetCharacterDto>> serviceResponse =
-                new() { Data = await GetMappedCharactersList(userId), IsSuccess = true, };
+                new() { Data = await GetMappedCharactersList(), IsSuccess = true, Message = $"Characters corresponding to userId: {characterToAdd.User!.Id}"};
 
             return serviceResponse;
         }
@@ -87,12 +98,15 @@ namespace dotnet_rpg.Services.CharacterService
         )
         {
             ServiceResponse<GetCharacterDto> serviceResponse = new();
-            var matchedCharacter = _dataContext.Characters.FirstOrDefault(
+            var matchedCharacter = _dataContext.Characters
+                    // Might need to include related objects(Character User) first.
+                .Include(character => character.User)
+                .FirstOrDefault(
                 character => character.Id == updateCharacter.Id
             );
 
             // we can also wrap this into a try-catch block and set the data, message and isSuccess = false
-            if (matchedCharacter is not null)
+            if (matchedCharacter is not null || matchedCharacter?.User!.Id == GetAuthUserId())
             {
                 // we are mapping the values from the new updated character to the matched character
                 _mapper.Map(updateCharacter, matchedCharacter);
@@ -110,10 +124,29 @@ namespace dotnet_rpg.Services.CharacterService
 
             return serviceResponse;
         }
-        
-        private async Task<List<GetCharacterDto>> GetMappedCharactersList(int userId)
+
+        private async Task<User?> GetDbUser()
         {
-            var charactersAsyncList = await _dataContext.Characters.Where(c => c.User!.Id == userId).ToListAsync();
+            var user = await _dataContext.Users.FirstOrDefaultAsync(user => user.Id == GetAuthUserId());
+            return user;
+        }
+        
+        private int GetAuthUserId()
+        {
+            var claims = _httpContextAccessor.HttpContext!.User;
+            // we set the user if to NameIdentifier claimType
+            // claims.Add(new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()));
+            var nameIdentifier = claims.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            return int.Parse(nameIdentifier);
+        }
+        
+        private async Task<List<GetCharacterDto>> GetMappedCharactersList()
+        {
+            var userId = GetAuthUserId();
+
+            var charactersAsyncList = await _dataContext.Characters.
+                // only get the characters related to the auth user
+                Where(c => c.User!.Id == userId).ToListAsync();
             var mappedCharacterList = charactersAsyncList.Select(character => _mapper.Map<GetCharacterDto>(character)).ToList();
             return mappedCharacterList;
         }
