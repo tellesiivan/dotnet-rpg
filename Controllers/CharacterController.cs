@@ -2,7 +2,7 @@ using System.Security.Claims;
 using dotnet_rpg.DTOs;
 using dotnet_rpg.DTOs.Character;
 using dotnet_rpg.Models;
-using dotnet_rpg.Services.CharacterService;
+using dotnet_rpg.Services.Character;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -66,6 +66,15 @@ namespace dotnet_rpg.Controllers
             }
 
             return Ok(updatedCharacterRes);
+        }
+
+        [HttpPost]
+        [Route("Skill")]
+        public async Task<ActionResult<ServiceResponse<GetCharacterDto>>> AddSkill(
+            [FromBody]AddCharacterSkillDto characterSkillDto)
+        {
+            var response = await _characterService.AddCharacterSkill(characterSkillDto);
+            return response.IsSuccess ? Ok(response) : NotFound(response);
         }
     }
 }

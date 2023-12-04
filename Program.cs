@@ -3,7 +3,8 @@ global using AutoMapper;
 global using Microsoft.EntityFrameworkCore;
 using dotnet_rpg.Data;
 using dotnet_rpg.Services.Auth;
-using dotnet_rpg.Services.CharacterService;
+using dotnet_rpg.Services.Character;
+using dotnet_rpg.Services.Weapons;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -42,6 +43,7 @@ builder.Services.AddAutoMapper(typeof(Program).Assembly);
 // Adds a scoped service of the type specified in ICharacterService with an implementation type specified in CharacterService to the specified IServiceCollection.<Interface, Service>
 builder.Services.AddScoped<ICharacterService, CharacterService>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+builder.Services.AddScoped<IWeaponService, WeaponService>();
 
 // auth
 

@@ -4,7 +4,7 @@ using dotnet_rpg.DTOs;
 using dotnet_rpg.DTOs.Character;
 using dotnet_rpg.Models;
 
-namespace dotnet_rpg.Services.CharacterService
+namespace dotnet_rpg.Services.Character
 {
     public class CharacterService : ICharacterService
     {
@@ -31,7 +31,10 @@ namespace dotnet_rpg.Services.CharacterService
         public async Task<ServiceResponse<GetCharacterDto>> GetCharacterById(int id)
         {
             var character =
-                await _dataContext.Characters.FirstOrDefaultAsync((character => character.Id == id && 
+                await _dataContext.Characters
+                    .Include(character => character.Skills)
+                    .Include(character => character.Weapon)
+                    .FirstOrDefaultAsync((character => character.Id == id && 
                     character.User!.Id == GetAuthUserId()));
 
             ServiceResponse<GetCharacterDto> serviceResponse =
@@ -47,7 +50,7 @@ namespace dotnet_rpg.Services.CharacterService
         public async Task<BaseResponse> DeleteCharacterById(int id)
         {
             BaseResponse response = new();
-            Character? matchedCharacter = _dataContext.Characters.FirstOrDefault(
+            Models.Character? matchedCharacter = _dataContext.Characters.FirstOrDefault(
                 character => character.Id == id  && 
                              character.User!.Id == GetAuthUserId()
             );
@@ -80,7 +83,7 @@ namespace dotnet_rpg.Services.CharacterService
         )
         {
             // map our new character to the correct model
-            Character characterToAdd = _mapper.Map<Character>(newCharacter);
+            Models.Character characterToAdd = _mapper.Map<Models.Character>(newCharacter);
             // add auth user to the character 
             characterToAdd.User = await GetDbUser();
             
@@ -123,6 +126,50 @@ namespace dotnet_rpg.Services.CharacterService
             }
 
             return serviceResponse;
+        }
+
+        public async Task<ServiceResponse<GetCharacterDto>> AddCharacterSkill(AddCharacterSkillDto characterSkillDto)
+        {
+            var response = new ServiceResponse<GetCharacterDto>();
+            try
+            {
+
+                var character = await _dataContext.Characters
+                    .Include(c => c.Weapon)
+                    .Include(c => c.Skills)
+                    .FirstOrDefaultAsync(
+                    c => c.Id == characterSkillDto.CharacterId && c.User!.Id == GetAuthUserId()
+                );
+
+                if (character is null)
+                {
+                    throw new Exception("Character not found");
+                }
+
+                var skill =
+                    await _dataContext.Skills.FirstOrDefaultAsync(s =>
+                        s.Id == characterSkillDto.SkillId);
+                
+                if (skill is null)
+                {
+                    throw new Exception("Skill not found");
+                }
+                
+                // add the skill found by id to the matched character
+                character.Skills!.Add(skill);
+                await _dataContext.SaveChangesAsync();
+
+                response.Message = "Successfully added a skill to the provided character";
+                response.Data = _mapper.Map<GetCharacterDto>(character);
+
+            }
+            catch (Exception e)
+            {
+                response.IsSuccess = false;
+                response.Message = e.Message;
+            }
+
+            return response;
         }
 
         private async Task<User?> GetDbUser()
