@@ -21,7 +21,7 @@ namespace dotnet_rpg.Controllers
         }
 
         [HttpGet("all")]
-        public async Task<ActionResult<ServiceResponse<List<Character>>>> GetCharcters()
+        public async Task<ActionResult<ServiceResponse<List<Character>>>> GetCharacters()
         {
             int userId = int.Parse(User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)!.Value);
             return Ok(await _characterService.GetCharacters());
